@@ -9,39 +9,42 @@ from ament_index_python.packages import get_package_share_directory
 import os
 
 def generate_launch_description():
-    # Define the directory where your package configs are located
-    share_dir = get_package_share_directory('your_package_name')
+    # Base directory for your workspace
+    base_dir = os.path.join('/home', 'pi', 'ydlidar_ros2_ws', 'src')
 
-    # RViz2 configuration file path
-    rviz_config_file = os.path.join(share_dir, 'config', 'slam_config.rviz')
+    # Path to the SLAM parameter file
+    parameter_file = os.path.join(base_dir, 'config', 'slam_params.yaml')
+
+    # Declare the use of parameter file as a Launch Argument
+    params_declare = DeclareLaunchArgument(
+        'params_file',
+        default_value=parameter_file,
+        description='Path to the parameter file for SLAM settings.'
+    )
+
+    # SLAM Toolbox Node Configuration
+    slam_toolbox_node = Node(
+        package='slam_toolbox',
+        executable='async_slam_toolbox_node',
+        name='slam_toolbox',
+        output='screen',
+        parameters=[LaunchConfiguration('params_file')]
+    )
+
+    # RViz Node Configuration
+    rviz_config_file = os.path.join(base_dir, 'config', 'ydlidar.rviz')
+    rviz_node = Node(
+        package='rviz2',
+        executable='rviz2',
+        name='rviz2',
+        arguments=['-d', rviz_config_file],
+        output='screen'
+    )
 
     return LaunchDescription([
-        Node(
-            package='slam_toolbox',
-            executable='sync_slam_toolbox_node',
-            name='slam_toolbox',
-            output='screen',
-            parameters=[{'use_sim_time': False,
-                         'map_update_interval': 5.0,
-                         'resolution': 0.05,
-                         'max_range': 10.0,
-                         'minimum_travel_distance': 0.5,
-                         'minimum_travel_heading': 0.5,
-                         'scan_topic': '/scan',
-                         'base_frame': 'base_link',
-                         'odom_frame': 'odom',
-                         'map_frame': 'map',
-                         'provide_odom_frame': False,
-                         'use_scan_matching': True,
-                         'use_scan_barycenter': True,
-                         'solver_type': 'ceres'}]
-        ),
-        Node(
-            package='rviz2',
-            executable='rviz2',
-            name='rviz2',
-            arguments=['-d', rviz_config_file],
-            output='screen'
-        )
+        params_declare,
+        slam_toolbox_node,
+        rviz_node
     ])
+
 ```
